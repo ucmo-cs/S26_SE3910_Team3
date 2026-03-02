@@ -26,7 +26,7 @@ const generateTimeSlots = (): { [key: string]: TimeSlot[] } => {
     const dayOfWeek = date.getDay();
     
     // Skip weekends
-    if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+    if (dayOfWeek === 0 || dayOfWeek === 1) continue;
     
     slots[dateStr] = [];
     

@@ -1,4 +1,4 @@
-import { CheckCircle, Calendar, MapPin, Clock, User, Mail, Phone, FileText } from "lucide-react";
+import { FileText, Calendar, MapPin, User, CheckCircle } from "lucide-react";
 import { useState } from "react";
 import type { Branch } from "./BranchSelectionStep";
 import type { TimeSlot } from "./TimeSlotStep";
@@ -17,19 +17,27 @@ interface ConfirmationStepProps {
 }
 
 const formatDate = (dateStr: string): string => {
-  const date = new Date(dateStr);
-  const options: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
-  return date.toLocaleDateString('en-US', options);
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+};
+
+const rowStyle = {
+  display: "flex",
+  gap: 12,
+  alignItems: "flex-start",
+  padding: "14px 0",
+  borderBottom: "1px solid #f0ece4",
 };
 
 export function ConfirmationStep({
-  appointmentType,
-  branch,
-  timeSlot,
-  userInfo,
-  onConfirm,
-  onBack
-}: ConfirmationStepProps) {
+                                   appointmentType,
+                                   branch,
+                                   timeSlot,
+                                   userInfo,
+                                   onConfirm,
+                                   onBack,
+                                 }: ConfirmationStepProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,158 +46,116 @@ export function ConfirmationStep({
   const handleConfirmAppointment = async () => {
     setIsLoading(true);
     setError(null);
-
     try {
-      // 1. Book the appointment via Spring Boot API
-      const appointmentResponse = await bookAppointment({
-        appointmentType,
-        branch,
-        timeSlot,
-        userInfo,
-      });
-
-      // 2. Send confirmation email with calendar invite
+      const appointmentResponse = await bookAppointment({ appointmentType, branch, timeSlot, userInfo });
       await sendConfirmationEmail({
         appointmentId: appointmentResponse.id,
         email: userInfo.email,
         confirmationNumber: appointmentResponse.confirmationNumber,
         appointmentType,
-        branch: {
-          name: branch.name,
-          address: branch.address,
-          city: branch.city,
-          state: branch.state,
-          zip: branch.zip,
-          phone: branch.phone,
-        },
-        timeSlot: {
-          date: timeSlot.date,
-          time: timeSlot.time,
-        },
+        branch: { name: branch.name, address: branch.address, city: branch.city, state: branch.state, zip: branch.zip, phone: branch.phone },
+        timeSlot: { date: timeSlot.date, time: timeSlot.time },
         userInfo,
       });
-
-      // 3. Move to success step with appointment data
       onConfirm(appointmentResponse);
     } catch (err) {
-      console.error("Error confirming appointment:", err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to book appointment. Please try again."
-      );
+      setError(err instanceof Error ? err.message : "Failed to book appointment. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-          <CheckCircle className="w-8 h-8 text-green-600" />
+      <div className="w-full">
+        <div className="mb-6">
+          <p className="text-xs font-medium uppercase tracking-widest mb-1" style={{ color: "#4a9c4a" }}>Step 5 of 5</p>
+          <h1 className="text-2xl font-medium" style={{ color: "#1a2e1a" }}>Review your appointment</h1>
+          <p className="text-sm mt-1" style={{ color: "#6b7c6b" }}>Please confirm the details below</p>
         </div>
-        <h1 className="text-3xl mb-2">Review Your Appointment</h1>
-        <p className="text-gray-600">Please confirm the details below</p>
-      </div>
 
-      {/* Error Message */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-          <p className="text-sm text-red-900">
-            <strong>Error:</strong> {error}
-          </p>
-        </div>
-      )}
+        {error && (
+            <div
+                className="flex items-start gap-3 p-4 rounded-lg mb-4 text-sm"
+                style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#b91c1c" }}
+            >
+              <span className="font-medium">Error:</span> {error}
+            </div>
+        )}
 
-      <div className="bg-white border border-gray-200 rounded-lg p-8 mb-6">
-        {/* Appointment Type */}
-        <div className="mb-6 pb-6 border-b border-gray-200">
-          <div className="flex items-start gap-3">
-            <FileText className="w-5 h-5 text-green-600 mt-0.5" />
+        <div className="rounded-xl p-6 mb-4" style={{ background: "white", border: "1px solid #e8e4dc" }}>
+          <div style={{ ...rowStyle }}>
+            <FileText className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "#4a9c4a" }} />
             <div>
-              <h3 className="font-medium text-gray-600 mb-1">Appointment Type</h3>
-              <p className="text-lg">{appointmentType}</p>
+              <div className="text-xs uppercase tracking-wide mb-1" style={{ color: "#8a9a8a" }}>Appointment type</div>
+              <div className="text-sm font-medium" style={{ color: "#1a2e1a" }}>{appointmentType}</div>
             </div>
           </div>
-        </div>
 
-        {/* Date and Time */}
-        <div className="mb-6 pb-6 border-b border-gray-200">
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="flex items-start gap-3">
-              <Calendar className="w-5 h-5 text-green-600 mt-0.5" />
-              <div>
-                <h3 className="font-medium text-gray-600 mb-1">Date</h3>
-                <p className="text-lg">{formatDate(timeSlot.date)}</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <Clock className="w-5 h-5 text-green-600 mt-0.5" />
-              <div>
-                <h3 className="font-medium text-gray-600 mb-1">Time</h3>
-                <p className="text-lg">{timeSlot.time}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Branch Location */}
-        <div className="mb-6 pb-6 border-b border-gray-200">
-          <div className="flex items-start gap-3">
-            <MapPin className="w-5 h-5 text-green-600 mt-0.5" />
+          <div style={{ ...rowStyle }}>
+            <Calendar className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "#4a9c4a" }} />
             <div>
-              <h3 className="font-medium text-gray-600 mb-1">Branch Location</h3>
-              <p className="text-lg font-medium">{branch.name}</p>
-              <p className="text-gray-600">{branch.address}</p>
-              <p className="text-gray-600">{branch.city}, {branch.state} {branch.zip}</p>
-              <p className="text-gray-600 mt-1">{branch.phone}</p>
+              <div className="text-xs uppercase tracking-wide mb-1" style={{ color: "#8a9a8a" }}>Date & time</div>
+              <div className="text-sm font-medium" style={{ color: "#1a2e1a" }}>{formatDate(timeSlot.date)}</div>
+              <div className="text-sm" style={{ color: "#6b7c6b" }}>{timeSlot.time} · 1 hour</div>
+            </div>
+          </div>
+
+          <div style={{ ...rowStyle }}>
+            <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "#4a9c4a" }} />
+            <div>
+              <div className="text-xs uppercase tracking-wide mb-1" style={{ color: "#8a9a8a" }}>Branch location</div>
+              <div className="text-sm font-medium" style={{ color: "#1a2e1a" }}>{branch.name}</div>
+              <div className="text-sm" style={{ color: "#6b7c6b" }}>{branch.address}</div>
+              <div className="text-sm" style={{ color: "#6b7c6b" }}>{branch.city}, {branch.state} {branch.zip}</div>
+              <div className="text-sm" style={{ color: "#6b7c6b" }}>{branch.phone}</div>
+            </div>
+          </div>
+
+          <div style={{ ...rowStyle, borderBottom: "none" }}>
+            <User className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "#4a9c4a" }} />
+            <div>
+              <div className="text-xs uppercase tracking-wide mb-1" style={{ color: "#8a9a8a" }}>Your information</div>
+              <div className="text-sm font-medium" style={{ color: "#1a2e1a" }}>{userInfo.name}</div>
+              <div className="text-sm" style={{ color: "#6b7c6b" }}>{userInfo.email} · {userInfo.phone}</div>
             </div>
           </div>
         </div>
 
-        {/* Contact Information */}
-        <div>
-          <h3 className="font-medium text-gray-600 mb-4">Your Information</h3>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <User className="w-5 h-5 text-green-600" />
-              <p>{userInfo.name}</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Mail className="w-5 h-5 text-green-600" />
-              <p>{userInfo.email}</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Phone className="w-5 h-5 text-green-600" />
-              <p>{userInfo.phone}</p>
-            </div>
-          </div>
+        <div
+            className="flex items-start gap-3 rounded-lg px-4 py-3 mb-4 text-sm"
+            style={{ background: "#f0f8f0", border: "1px solid #c8e0c8", color: "#3d5a3d" }}
+        >
+          <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "#4a9c4a" }} />
+          A confirmation email and calendar invite will be sent to {userInfo.email}
+        </div>
+
+        <div className="flex gap-3">
+          <button
+              onClick={onBack}
+              disabled={isLoading}
+              className="flex-1 h-12 rounded-lg text-sm font-medium transition-colors"
+              style={{
+                background: "transparent",
+                border: "1px solid #c8c4bc",
+                color: "#3d5a3d",
+                opacity: isLoading ? 0.5 : 1,
+              }}
+          >
+            ← Back
+          </button>
+          <button
+              onClick={handleConfirmAppointment}
+              disabled={isLoading}
+              className="h-12 rounded-lg text-sm font-medium text-white transition-colors"
+              style={{
+                flex: 2,
+                background: isLoading ? "#8ab88a" : "#2d6e2d",
+                cursor: isLoading ? "not-allowed" : "pointer",
+              }}
+          >
+            {isLoading ? "Confirming..." : "Confirm appointment"}
+          </button>
         </div>
       </div>
-
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-        <p className="text-sm text-green-900">
-          <strong>Note:</strong> You will receive a confirmation email at {userInfo.email} with your appointment details and a calendar invite.
-        </p>
-      </div>
-
-      <div className="flex gap-4">
-        <button
-          onClick={onBack}
-          disabled={isLoading}
-          className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Back
-        </button>
-        <button
-          onClick={handleConfirmAppointment}
-          disabled={isLoading}
-          className="flex-1 bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isLoading ? "Confirming..." : "Confirm Appointment"}
-        </button>
-      </div>
-    </div>
   );
 }

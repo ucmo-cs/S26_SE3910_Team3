@@ -30,7 +30,7 @@ export function BranchSelectionStep({
                                       selectedBranch,
                                       onBranchSelect,
                                       onNext,
-                                      onBack
+                                      onBack,
                                     }: BranchSelectionStepProps) {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,119 +40,122 @@ export function BranchSelectionStep({
     const fetchBranches = async () => {
       setLoading(true);
       setError(null);
-
       try {
         const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
         const response = await fetch(`${baseUrl}/appointments/branches?zipCode=${zipCode}`);
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch branches");
-        }
-
+        if (!response.ok) throw new Error("Failed to fetch branches");
         const data: Branch[] = await response.json();
         setBranches(data);
       } catch (err) {
         setError("Unable to load branches. Please check your connection and try again.");
-        console.error("Error fetching branches:", err);
       } finally {
         setLoading(false);
       }
     };
-
-    if (zipCode) {
-      fetchBranches();
-    }
+    if (zipCode) fetchBranches();
   }, [zipCode]);
 
   return (
-      <div className="w-full max-w-2xl mx-auto">
-        <h1 className="text-3xl mb-2 text-center">Select a Branch</h1>
-        <p className="text-gray-600 mb-8 text-center">
-          Choose your preferred location near {zipCode}
-        </p>
+      <div className="w-full">
+        <div className="mb-6">
+          <p className="text-xs font-medium uppercase tracking-widest mb-1" style={{ color: "#4a9c4a" }}>Step 2 of 5</p>
+          <h1 className="text-2xl font-medium" style={{ color: "#1a2e1a" }}>Select a branch</h1>
+          <p className="text-sm mt-1" style={{ color: "#6b7c6b" }}>
+            Showing locations near {zipCode} — sorted by distance
+          </p>
+        </div>
 
-        {/* Loading state */}
         {loading && (
-            <div className="flex flex-col items-center justify-center py-16 text-gray-500">
-              <Loader className="w-8 h-8 animate-spin mb-3 text-green-600" />
-              <p>Finding branches near you...</p>
+            <div className="flex items-center justify-center py-16" style={{ color: "#6b7c6b" }}>
+              <Loader className="w-5 h-5 animate-spin mr-2" style={{ color: "#4a9c4a" }} />
+              <span className="text-sm">Finding branches near you...</span>
             </div>
         )}
 
-        {/* Error state */}
         {error && !loading && (
-            <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg mb-6 text-red-700">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <p>{error}</p>
+            <div
+                className="flex items-center gap-3 p-4 rounded-lg mb-4 text-sm"
+                style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#b91c1c" }}
+            >
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              {error}
             </div>
         )}
 
-        {/* Branch list */}
         {!loading && !error && (
-            <div className="space-y-4 mb-8">
+            <div className="space-y-3 mb-4">
               {branches.map((branch) => {
-                const canHandleAppointment = branch.availableServices?.includes(appointmentType);
+                const canHandle = branch.availableServices?.includes(appointmentType);
+                const isSelected = selectedBranch?.id === branch.id;
 
                 return (
                     <div
                         key={branch.id}
-                        onClick={() => canHandleAppointment && onBranchSelect(branch)}
-                        className={`p-6 border-2 rounded-lg transition-all ${
-                            !canHandleAppointment
-                                ? "border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed"
-                                : selectedBranch?.id === branch.id
-                                    ? "border-green-600 bg-green-50 cursor-pointer"
-                                    : "border-gray-200 hover:border-green-300 bg-white cursor-pointer"
-                        }`}
+                        onClick={() => canHandle && onBranchSelect(branch)}
+                        className="rounded-xl p-5 transition-all"
+                        style={{
+                          background: isSelected ? "#f0f8f0" : canHandle ? "white" : "#faf9f7",
+                          border: isSelected
+                              ? "2px solid #2d6e2d"
+                              : "1px solid #e8e4dc",
+                          opacity: canHandle ? 1 : 0.6,
+                          cursor: canHandle ? "pointer" : "not-allowed",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (canHandle && !isSelected) {
+                            (e.currentTarget as HTMLDivElement).style.borderColor = "#4a9c4a";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (canHandle && !isSelected) {
+                            (e.currentTarget as HTMLDivElement).style.borderColor = "#e8e4dc";
+                          }
+                        }}
                     >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <h3
-                              className={`font-semibold text-lg mb-1 ${
-                                  !canHandleAppointment ? "text-gray-500" : ""
-                              }`}
-                          >
-                            {branch.name}
-                          </h3>
-                          <div
-                              className={`flex items-center text-sm mb-1 ${
-                                  !canHandleAppointment ? "text-gray-400" : "text-gray-600"
-                              }`}
-                          >
-                            <MapPin className="w-4 h-4 mr-1" />
-                            {branch.address}, {branch.city}, {branch.state} {branch.zip}
-                          </div>
-                        </div>
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="font-medium text-sm" style={{ color: canHandle ? "#1a2e1a" : "#6b7c6b" }}>
+                          {branch.name}
+                        </h3>
                         <span
-                            className={`text-sm font-medium ${
-                                !canHandleAppointment ? "text-gray-400" : "text-green-600"
-                            }`}
+                            className="text-xs font-medium px-2 py-0.5 rounded-full ml-3 flex-shrink-0"
+                            style={{
+                              background: canHandle ? "#edf5ed" : "#f4f2ee",
+                              color: canHandle ? "#2d6e2d" : "#8a9a8a",
+                            }}
                         >
                     {branch.distance}
                   </span>
                       </div>
 
-                      {!canHandleAppointment && (
-                          <div className="mb-3 flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
-                            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                            <span>
-                      This branch does not offer {appointmentType} appointments
-                    </span>
+                      <div className="flex items-start gap-1 mb-3">
+                        <MapPin className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style={{ color: "#8a9a8a" }} />
+                        <span className="text-xs" style={{ color: "#6b7c6b" }}>
+                    {branch.address}, {branch.city}, {branch.state} {branch.zip}
+                  </span>
+                      </div>
+
+                      {!canHandle && (
+                          <div
+                              className="flex items-center gap-2 text-xs rounded-md px-3 py-2 mb-3"
+                              style={{
+                                background: "#fdf0e0",
+                                border: "1px solid #f0d5a0",
+                                color: "#8a5a2a",
+                              }}
+                          >
+                            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                            This branch does not offer {appointmentType} appointments
                           </div>
                       )}
 
-                      <div
-                          className={`flex items-center gap-6 text-sm ${
-                              !canHandleAppointment ? "text-gray-400" : "text-gray-600"
-                          }`}
-                      >
-                        <div className="flex items-center">
-                          <Phone className="w-4 h-4 mr-1" />
-                          {branch.phone}
+                      <div className="flex items-center gap-5">
+                        <div className="flex items-center gap-1.5">
+                          <Phone className="w-3 h-3" style={{ color: "#8a9a8a" }} />
+                          <span className="text-xs" style={{ color: "#8a9a8a" }}>{branch.phone}</span>
                         </div>
-                        <div className="flex items-center">
-                          <Clock className="w-4 h-4 mr-1" />
-                          Mon-Fri: 9AM - 5PM
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-3 h-3" style={{ color: "#8a9a8a" }} />
+                          <span className="text-xs" style={{ color: "#8a9a8a" }}>Mon–Fri 9AM–5PM</span>
                         </div>
                       </div>
                     </div>
@@ -161,19 +164,25 @@ export function BranchSelectionStep({
             </div>
         )}
 
-        <div className="flex gap-4">
+        <div className="flex gap-3">
           <button
               onClick={onBack}
-              className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+              className="flex-1 h-12 rounded-lg text-sm font-medium transition-colors"
+              style={{ background: "transparent", border: "1px solid #c8c4bc", color: "#3d5a3d" }}
           >
-            Back
+            ← Back
           </button>
           <button
               onClick={onNext}
               disabled={!selectedBranch || loading}
-              className="flex-1 bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              className="flex-2 h-12 rounded-lg text-sm font-medium text-white transition-colors"
+              style={{
+                flex: 2,
+                background: selectedBranch && !loading ? "#2d6e2d" : "#c8c4bc",
+                cursor: selectedBranch && !loading ? "pointer" : "not-allowed",
+              }}
           >
-            Select Time Slot
+            Select time slot →
           </button>
         </div>
       </div>

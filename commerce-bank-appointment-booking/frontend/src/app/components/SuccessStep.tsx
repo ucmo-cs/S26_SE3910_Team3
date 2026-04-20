@@ -1,4 +1,4 @@
-import { CheckCircle, Calendar, Download } from "lucide-react";
+import { Calendar, MapPin, FileText, Download, Check } from "lucide-react";
 import { useState } from "react";
 import type { Branch } from "./BranchSelectionStep";
 import type { TimeSlot } from "./TimeSlotStep";
@@ -16,20 +16,28 @@ interface SuccessStepProps {
 }
 
 const formatDate = (dateStr: string): string => {
-  const date = new Date(dateStr);
-  const options: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
-  return date.toLocaleDateString('en-US', options);
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+};
+
+const rowStyle = {
+  display: "flex",
+  gap: 12,
+  alignItems: "flex-start",
+  padding: "14px 0",
+  borderBottom: "1px solid #f0ece4",
 };
 
 export function SuccessStep({
-  appointmentType,
-  branch,
-  timeSlot,
-  confirmationNumber,
-  appointmentId,
-  userInfo,
-  onStartOver
-}: SuccessStepProps) {
+                              appointmentType,
+                              branch,
+                              timeSlot,
+                              confirmationNumber,
+                              appointmentId,
+                              userInfo,
+                              onStartOver,
+                            }: SuccessStepProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
@@ -38,131 +46,144 @@ export function SuccessStep({
   const handleDownloadPDF = async () => {
     setIsDownloading(true);
     setDownloadError(null);
-
     try {
       await generatePDF({
         appointmentId,
         confirmationNumber,
         appointmentType,
-        branch: {
-          name: branch.name,
-          address: branch.address,
-          city: branch.city,
-          state: branch.state,
-          zip: branch.zip,
-          phone: branch.phone,
-        },
-        timeSlot: {
-          date: timeSlot.date,
-          time: timeSlot.time,
-        },
-        userInfo: {
-          name: userInfo.name,
-          email: userInfo.email,
-          phone: userInfo.phone,
-        },
+        branch: { name: branch.name, address: branch.address, city: branch.city, state: branch.state, zip: branch.zip, phone: branch.phone },
+        timeSlot: { date: timeSlot.date, time: timeSlot.time },
+        userInfo: { name: userInfo.name, email: userInfo.email, phone: userInfo.phone },
       });
     } catch (err) {
-      console.error("Error downloading PDF:", err);
-      setDownloadError(
-        err instanceof Error
-          ? err.message
-          : "Failed to download PDF. Please try again."
-      );
+      setDownloadError(err instanceof Error ? err.message : "Failed to download PDF. Please try again.");
     } finally {
       setIsDownloading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto text-center">
-      <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-6">
-        <CheckCircle className="w-12 h-12 text-green-600" />
-      </div>
-
-      <h1 className="text-4xl mb-3">Appointment Confirmed!</h1>
-      <p className="text-gray-600 text-lg mb-8">
-        Your appointment has been successfully scheduled
-      </p>
-
-      {/* Download Error Message */}
-      {downloadError && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 text-left">
-          <p className="text-sm text-red-900">
-            <strong>Error:</strong> {downloadError}
-          </p>
-        </div>
-      )}
-
-      <div className="bg-white border border-gray-200 rounded-lg p-8 mb-6 text-left">
-        <div className="mb-6 pb-6 border-b border-gray-200">
-          <h3 className="text-gray-600 text-sm mb-1">Confirmation Number</h3>
-          <p className="text-2xl font-mono font-semibold text-green-600">{confirmationNumber}</p>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
-          <div>
-            <h3 className="font-medium text-gray-600 mb-2">Appointment Type</h3>
-            <p className="text-lg">{appointmentType}</p>
+      <div className="w-full">
+        {/* Success header */}
+        <div className="text-center mb-6">
+          <div
+              className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
+              style={{ background: "#2d6e2d" }}
+          >
+            <Check className="w-7 h-7 text-white" strokeWidth={2.5} />
           </div>
+          <h1 className="text-2xl font-medium mb-1" style={{ color: "#1a2e1a" }}>Appointment confirmed</h1>
+          <p className="text-sm" style={{ color: "#6b7c6b" }}>Your appointment has been successfully scheduled</p>
+        </div>
+
+        {/* Confirmation number block */}
+        <div
+            className="rounded-xl px-5 py-4 mb-4 flex items-center justify-between"
+            style={{ background: "#1a2e1a" }}
+        >
           <div>
-            <h3 className="font-medium text-gray-600 mb-2">Date & Time</h3>
-            <div className="flex items-center gap-2 text-lg">
-              <Calendar className="w-5 h-5 text-green-600" />
-              <div>
-                <p>{formatDate(timeSlot.date)}</p>
-                <p className="text-green-600">{timeSlot.time}</p>
-              </div>
+            <div className="text-xs uppercase tracking-widest mb-1" style={{ color: "#8aab8a" }}>
+              Confirmation number
+            </div>
+            <div
+                className="text-xl font-medium tracking-wider"
+                style={{ color: "white", fontFamily: "monospace" }}
+            >
+              {confirmationNumber}
+            </div>
+          </div>
+          <button
+              onClick={() => navigator.clipboard?.writeText(confirmationNumber)}
+              className="text-xs px-3 py-1.5 rounded-md transition-colors"
+              style={{ color: "#4a9c4a", background: "rgba(74,156,74,0.1)" }}
+          >
+            Copy
+          </button>
+        </div>
+
+        {downloadError && (
+            <div
+                className="flex items-start gap-3 p-4 rounded-lg mb-4 text-sm"
+                style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#b91c1c" }}
+            >
+              <span className="font-medium">Error:</span> {downloadError}
+            </div>
+        )}
+
+        {/* Appointment details */}
+        <div className="rounded-xl p-6 mb-4" style={{ background: "white", border: "1px solid #e8e4dc" }}>
+          <div style={{ ...rowStyle }}>
+            <FileText className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "#4a9c4a" }} />
+            <div>
+              <div className="text-xs uppercase tracking-wide mb-1" style={{ color: "#8a9a8a" }}>Type</div>
+              <div className="text-sm font-medium" style={{ color: "#1a2e1a" }}>{appointmentType}</div>
+            </div>
+          </div>
+
+          <div style={{ ...rowStyle }}>
+            <Calendar className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "#4a9c4a" }} />
+            <div>
+              <div className="text-xs uppercase tracking-wide mb-1" style={{ color: "#8a9a8a" }}>Date & time</div>
+              <div className="text-sm font-medium" style={{ color: "#1a2e1a" }}>{formatDate(timeSlot.date)}</div>
+              <div className="text-sm" style={{ color: "#6b7c6b" }}>{timeSlot.time} · 1 hour</div>
+            </div>
+          </div>
+
+          <div style={{ ...rowStyle, borderBottom: "none" }}>
+            <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "#4a9c4a" }} />
+            <div>
+              <div className="text-xs uppercase tracking-wide mb-1" style={{ color: "#8a9a8a" }}>Location</div>
+              <div className="text-sm font-medium" style={{ color: "#1a2e1a" }}>{branch.name}</div>
+              <div className="text-sm" style={{ color: "#6b7c6b" }}>{branch.address}</div>
+              <div className="text-sm" style={{ color: "#6b7c6b" }}>{branch.city}, {branch.state} {branch.zip}</div>
             </div>
           </div>
         </div>
 
-        <div>
-          <h3 className="font-medium text-gray-600 mb-2">Location</h3>
-          <p className="font-medium">{branch.name}</p>
-          <p className="text-gray-600">{branch.address}</p>
-          <p className="text-gray-600">{branch.city}, {branch.state} {branch.zip}</p>
+        {/* What's next */}
+        <div
+            className="rounded-xl p-5 mb-5"
+            style={{ background: "#f0f8f0", border: "1px solid #c8e0c8" }}
+        >
+          <div className="text-sm font-medium mb-3" style={{ color: "#1a2e1a" }}>What's next</div>
+          <ul className="space-y-2">
+            {[
+              "A confirmation email with all appointment details has been sent",
+              "A calendar invite has been sent to add this to your schedule",
+              "Please arrive 5 minutes early and bring a valid ID",
+              `To reschedule, call us at ${branch.phone}`,
+            ].map((item, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm" style={{ color: "#3d5a3d" }}>
+                  <span className="mt-0.5 flex-shrink-0" style={{ color: "#4a9c4a" }}>✓</span>
+                  {item}
+                </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Actions */}
+        <button
+            onClick={handleDownloadPDF}
+            disabled={isDownloading}
+            className="w-full h-12 rounded-lg text-sm font-medium text-white flex items-center justify-center gap-2 mb-3 transition-colors"
+            style={{
+              background: isDownloading ? "#8ab88a" : "#2d6e2d",
+              cursor: isDownloading ? "not-allowed" : "pointer",
+            }}
+        >
+          <Download className="w-4 h-4" />
+          {isDownloading ? "Generating PDF..." : "Download confirmation PDF"}
+        </button>
+
+        <div className="text-center">
+          <button
+              onClick={onStartOver}
+              className="text-sm transition-colors"
+              style={{ color: "#4a9c4a", background: "none", border: "none", cursor: "pointer" }}
+          >
+            Schedule another appointment
+          </button>
         </div>
       </div>
-
-      <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
-        <h3 className="font-semibold mb-3">What's Next?</h3>
-        <ul className="text-left space-y-2 text-sm text-gray-700">
-          <li className="flex items-start gap-2">
-            <span className="text-green-600 mt-0.5">✓</span>
-            <span>You will receive a confirmation email with all appointment details</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-green-600 mt-0.5">✓</span>
-            <span>A calendar invite has been sent to add this to your schedule</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-green-600 mt-0.5">✓</span>
-            <span>Please arrive 5 minutes early and bring a valid ID</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-green-600 mt-0.5">✓</span>
-            <span>If you need to reschedule, please call us at {branch.phone}</span>
-          </li>
-        </ul>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-4">
-        <button
-          onClick={handleDownloadPDF}
-          disabled={isDownloading}
-          className="flex-1 bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Download className="w-5 h-5" />
-          {isDownloading ? "Generating PDF..." : "Download Confirmation"}
-        </button>
-        <button
-          onClick={onStartOver}
-          className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-medium hover:bg-gray-300 transition-colors"
-        >
-          Schedule Another Appointment
-        </button>
-      </div>
-    </div>
   );
 }

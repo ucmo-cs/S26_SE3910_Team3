@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Calendar, Loader } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader } from "lucide-react";
 
 interface TimeSlot {
   date: string;
@@ -15,28 +15,21 @@ interface TimeSlotStepProps {
   onBack: () => void;
 }
 
-// Generate all time slots for the next 14 business days (no random availability)
 const generateDates = (): string[] => {
   const dates: string[] = [];
   const today = new Date();
   let dayOffset = 0;
-
   while (dates.length < 14) {
     dayOffset++;
     const date = new Date(today);
     date.setDate(today.getDate() + dayOffset);
     const dayOfWeek = date.getDay();
-
-    // Skip weekends (0 = Sunday, 6 = Saturday)
     if (dayOfWeek === 0 || dayOfWeek === 6) continue;
-
-    // Use local date parts instead of ISO string to avoid UTC timezone shift
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
     dates.push(`${year}-${month}-${day}`);
   }
-
   return dates;
 };
 
@@ -47,25 +40,16 @@ const TIME_SLOTS = [
 
 const formatDate = (dateStr: string): string => {
   const [year, month, day] = dateStr.split("-").map(Number);
-  const date = new Date(year, month - 1, day); // Local time, not UTC
-  const options: Intl.DateTimeFormatOptions = {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  };
-  return date.toLocaleDateString("en-US", options);
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 };
-
-const formatShortDate = (dateStr: string): string => {
+const formatDayNum = (dateStr: string): { day: string; num: string } => {
   const [year, month, day] = dateStr.split("-").map(Number);
-  const date = new Date(year, month - 1, day); // Local time, not UTC
-  const options: Intl.DateTimeFormatOptions = {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
+  const date = new Date(year, month - 1, day);
+  return {
+    day: date.toLocaleDateString("en-US", { weekday: "short" }),
+    num: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
   };
-  return date.toLocaleDateString("en-US", options);
 };
 
 export function TimeSlotStep({
@@ -81,10 +65,8 @@ export function TimeSlotStep({
   const [bookedTimes, setBookedTimes] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch booked slots whenever branch or date changes
   useEffect(() => {
     if (!branchId || !selectedDate) return;
-
     const fetchBookedSlots = async () => {
       setLoading(true);
       try {
@@ -92,19 +74,15 @@ export function TimeSlotStep({
         const response = await fetch(
             `${baseUrl}/appointments/booked-slots?branchId=${branchId}&date=${selectedDate}`
         );
-
         if (!response.ok) throw new Error("Failed to fetch booked slots");
-
         const data: string[] = await response.json();
         setBookedTimes(data);
-      } catch (err) {
-        console.error("Error fetching booked slots:", err);
-        setBookedTimes([]); // Assume all available on error
+      } catch {
+        setBookedTimes([]);
       } finally {
         setLoading(false);
       }
     };
-
     fetchBookedSlots();
   }, [branchId, selectedDate]);
 
@@ -112,132 +90,147 @@ export function TimeSlotStep({
   const canGoBack = currentWeekStart > 0;
   const canGoForward = currentWeekStart + 5 < availableDates.length;
 
-  const handlePreviousWeek = () => {
-    if (canGoBack) setCurrentWeekStart(Math.max(0, currentWeekStart - 5));
-  };
-
-  const handleNextWeek = () => {
-    if (canGoForward)
-      setCurrentWeekStart(Math.min(availableDates.length - 5, currentWeekStart + 5));
-  };
-
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
-    // Clear selected time slot if it was on the old date
     if (selectedTimeSlot?.date !== date) {
       onTimeSlotSelect({ date, time: "", available: false });
     }
   };
 
   return (
-      <div className="w-full max-w-4xl mx-auto">
-        <h1 className="text-3xl mb-2 text-center">Choose a Time</h1>
-        <p className="text-gray-600 mb-8 text-center">
-          Select your preferred date and time slot
-        </p>
-
-        {/* Date Navigation */}
+      <div className="w-full">
         <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <button
-                onClick={handlePreviousWeek}
-                disabled={!canGoBack}
-                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <div className="flex items-center gap-2 text-gray-600">
-              <Calendar className="w-5 h-5" />
-              <span className="font-medium">Select a Date</span>
-            </div>
-            <button
-                onClick={handleNextWeek}
-                disabled={!canGoForward}
-                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-5 gap-2">
-            {displayedDates.map((date) => (
-                <button
-                    key={date}
-                    onClick={() => handleDateSelect(date)}
-                    className={`p-3 rounded-lg border-2 text-sm transition-all ${
-                        selectedDate === date
-                            ? "border-green-600 bg-green-50 text-green-900"
-                            : "border-gray-200 hover:border-green-300 bg-white"
-                    }`}
-                >
-                  {formatShortDate(date)}
-                </button>
-            ))}
-          </div>
+          <p className="text-xs font-medium uppercase tracking-widest mb-1" style={{ color: "#4a9c4a" }}>Step 3 of 5</p>
+          <h1 className="text-2xl font-medium" style={{ color: "#1a2e1a" }}>Choose a time</h1>
+          <p className="text-sm mt-1" style={{ color: "#6b7c6b" }}>Select your preferred date and 1-hour slot</p>
         </div>
 
-        {/* Selected Date Display */}
-        {selectedDate && (
-            <div className="mb-4">
-              <h3 className="font-semibold text-lg">{formatDate(selectedDate)}</h3>
-              <p className="text-sm text-gray-600">Available time slots (1 hour each)</p>
-            </div>
-        )}
+        <div className="rounded-xl p-6 mb-4" style={{ background: "white", border: "1px solid #e8e4dc" }}>
+          {/* Date navigation */}
+          <div className="flex items-center gap-2 mb-5">
+            <button
+                onClick={() => canGoBack && setCurrentWeekStart(Math.max(0, currentWeekStart - 5))}
+                disabled={!canGoBack}
+                className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors flex-shrink-0"
+                style={{
+                  background: "white",
+                  border: "1px solid #ddd9d0",
+                  color: canGoBack ? "#3d5a3d" : "#c8c4bc",
+                  cursor: canGoBack ? "pointer" : "not-allowed",
+                }}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
 
-        {/* Loading State */}
-        {loading && (
-            <div className="flex items-center justify-center py-10 text-gray-500">
-              <Loader className="w-6 h-6 animate-spin mr-2 text-green-600" />
-              <span>Checking availability...</span>
-            </div>
-        )}
-
-        {/* Time Slots Grid */}
-        {selectedDate && !loading && (
-            <div className="grid grid-cols-4 gap-3 mb-8">
-              {TIME_SLOTS.map((time, index) => {
-                const isBooked = bookedTimes.includes(time);
-                const isSelected =
-                    selectedTimeSlot?.date === selectedDate &&
-                    selectedTimeSlot?.time === time;
-
+            <div className="flex gap-2 flex-1">
+              {displayedDates.map((date) => {
+                const { day, num } = formatDayNum(date);
+                const isSelected = selectedDate === date;
                 return (
                     <button
-                        key={index}
-                        onClick={() =>
-                            !isBooked &&
-                            onTimeSlotSelect({ date: selectedDate, time, available: true })
-                        }
-                        disabled={isBooked}
-                        className={`p-4 rounded-lg border-2 font-medium transition-all ${
-                            isSelected
-                                ? "border-green-600 bg-green-600 text-white"
-                                : isBooked
-                                    ? "border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed"
-                                    : "border-gray-200 hover:border-green-400 bg-white"
-                        }`}
+                        key={date}
+                        onClick={() => handleDateSelect(date)}
+                        className="flex-1 h-14 rounded-lg flex flex-col items-center justify-center gap-0.5 transition-all"
+                        style={{
+                          background: isSelected ? "#f0f8f0" : "white",
+                          border: isSelected ? "2px solid #2d6e2d" : "1px solid #ddd9d0",
+                          cursor: "pointer",
+                        }}
                     >
-                      {time}
-                      {isBooked && <div className="text-xs mt-1">Booked</div>}
+                      <span className="text-xs" style={{ color: isSelected ? "#2d6e2d" : "#8a9a8a" }}>{day}</span>
+                      <span className="text-xs font-medium" style={{ color: "#1a2e1a" }}>{num}</span>
                     </button>
                 );
               })}
             </div>
-        )}
 
-        <div className="flex gap-4">
+            <button
+                onClick={() => canGoForward && setCurrentWeekStart(Math.min(availableDates.length - 5, currentWeekStart + 5))}
+                disabled={!canGoForward}
+                className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors flex-shrink-0"
+                style={{
+                  background: "white",
+                  border: "1px solid #ddd9d0",
+                  color: canGoForward ? "#3d5a3d" : "#c8c4bc",
+                  cursor: canGoForward ? "pointer" : "not-allowed",
+                }}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {selectedDate && (
+              <>
+                <div className="mb-1 text-sm font-medium" style={{ color: "#1a2e1a" }}>
+                  {formatDate(selectedDate)}
+                </div>
+                <div className="mb-4 text-xs" style={{ color: "#8a9a8a" }}>
+                  Available slots · 1 hour each
+                </div>
+              </>
+          )}
+
+          {loading ? (
+              <div className="flex items-center justify-center py-8" style={{ color: "#6b7c6b" }}>
+                <Loader className="w-4 h-4 animate-spin mr-2" style={{ color: "#4a9c4a" }} />
+                <span className="text-sm">Checking availability...</span>
+              </div>
+          ) : (
+              <div className="grid grid-cols-4 gap-2">
+                {TIME_SLOTS.map((time, index) => {
+                  const isBooked = bookedTimes.includes(time);
+                  const isSelected = selectedTimeSlot?.date === selectedDate && selectedTimeSlot?.time === time;
+                  return (
+                      <button
+                          key={index}
+                          onClick={() => !isBooked && onTimeSlotSelect({ date: selectedDate, time, available: true })}
+                          disabled={isBooked}
+                          className="h-12 rounded-lg text-xs font-medium transition-all flex flex-col items-center justify-center"
+                          style={{
+                            background: isSelected ? "#2d6e2d" : isBooked ? "#f4f2ee" : "white",
+                            border: isSelected ? "2px solid #2d6e2d" : isBooked ? "1px solid #e8e4dc" : "1px solid #ddd9d0",
+                            color: isSelected ? "white" : isBooked ? "#b0b8b0" : "#1a2e1a",
+                            cursor: isBooked ? "not-allowed" : "pointer",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isBooked && !isSelected) {
+                              (e.currentTarget as HTMLButtonElement).style.borderColor = "#4a9c4a";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isBooked && !isSelected) {
+                              (e.currentTarget as HTMLButtonElement).style.borderColor = "#ddd9d0";
+                            }
+                          }}
+                      >
+                        {time}
+                        {isBooked && <span className="text-xs mt-0.5" style={{ fontSize: 10 }}>Booked</span>}
+                      </button>
+                  );
+                })}
+              </div>
+          )}
+        </div>
+
+        <div className="flex gap-3">
           <button
               onClick={onBack}
-              className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+              className="flex-1 h-12 rounded-lg text-sm font-medium transition-colors"
+              style={{ background: "transparent", border: "1px solid #c8c4bc", color: "#3d5a3d" }}
           >
-            Back
+            ← Back
           </button>
           <button
               onClick={onNext}
               disabled={!selectedTimeSlot?.time}
-              className="flex-1 bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              className="h-12 rounded-lg text-sm font-medium text-white transition-colors"
+              style={{
+                flex: 2,
+                background: selectedTimeSlot?.time ? "#2d6e2d" : "#c8c4bc",
+                cursor: selectedTimeSlot?.time ? "pointer" : "not-allowed",
+              }}
           >
-            Continue
+            Continue →
           </button>
         </div>
       </div>

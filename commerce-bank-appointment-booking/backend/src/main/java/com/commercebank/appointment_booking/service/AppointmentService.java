@@ -18,6 +18,9 @@ public class AppointmentService {
     private AppointmentRepository appointmentRepository;
 
     public Appointment bookAppointment(AppointmentRequest request) {
+
+        validateRequest(request);
+
         Appointment appointment = new Appointment();
         appointment.setAppointmentType(request.getAppointmentType());
         appointment.setBranch(request.getBranch());
@@ -33,6 +36,33 @@ public class AppointmentService {
         System.out.println("✅ Date: " + saved.getTimeSlot().getDate());
         System.out.println("✅ Time: " + saved.getTimeSlot().getTime());
         return saved;
+    }
+
+    private void validateRequest(AppointmentRequest request) {
+        if (request.getUserInfo() == null) {
+            throw new IllegalArgumentException("User information is required");
+        }
+        if (request.getUserInfo().getName() == null || request.getUserInfo().getName().trim().isEmpty()) {
+            throw new IllegalArgumentException("Name is required");
+        }
+        if (request.getUserInfo().getEmail() == null || request.getUserInfo().getEmail().trim().isEmpty()) {
+            throw new IllegalArgumentException("Email is required");
+        }
+        if (!request.getUserInfo().getEmail().matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+            throw new IllegalArgumentException("Invalid email format");
+        }
+        if (request.getUserInfo().getPhone() == null || request.getUserInfo().getPhone().trim().isEmpty()) {
+            throw new IllegalArgumentException("Phone number is required");
+        }
+        if (request.getTimeSlot() == null || request.getTimeSlot().getDate() == null || request.getTimeSlot().getDate().isEmpty()) {
+            throw new IllegalArgumentException("Date is required");
+        }
+        if (request.getTimeSlot().getTime() == null || request.getTimeSlot().getTime().isEmpty()) {
+            throw new IllegalArgumentException("Time slot is required");
+        }
+        if (request.getBranch() == null || request.getBranch().getId() == null || request.getBranch().getId().isEmpty()) {
+            throw new IllegalArgumentException("Branch is required");
+        }
     }
 
     private String generateConfirmationNumber() {

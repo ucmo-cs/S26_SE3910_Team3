@@ -11,6 +11,9 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import com.commercebank.appointment_booking.dto.BranchDTO;
 import java.util.List;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/appointments")
@@ -67,5 +70,13 @@ public class AppointmentController {
             @RequestParam String date) {
         List<String> bookedTimes = appointmentService.getBookedSlots(branchId, date);
         return ResponseEntity.ok(bookedTimes);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> handleValidationError(IllegalArgumentException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "Bad Request");
+        error.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 }

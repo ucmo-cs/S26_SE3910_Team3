@@ -130,8 +130,8 @@ git --version        # Should show any version
 Open a terminal and run:
 
 ```bash
-git clone https://github.com/ucmo-cs/S26_SE3910_Team3/commerce-bank-appointment-booking.git
-cd commerce-bank-appointment-booking
+git clone https://github.com/ucmo-cs/S26_SE3910_Team3.git
+cd S26_SE3910_Team3
 ```
 
 ---
